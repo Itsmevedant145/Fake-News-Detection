@@ -1,19 +1,22 @@
 import React, { useState } from 'react';
-import { Shield, AlertTriangle, CheckCircle, Sparkles, Copy, Check } from 'lucide-react';
+import { Shield, AlertTriangle, CheckCircle, Sparkles, TrendingUp, Globe, Tag } from 'lucide-react';
 
 const FakeNewsDetector = () => {
   const [text, setText] = useState('');
+  const [web, setWeb] = useState('');
+  const [category, setCategory] = useState('');
   const [result, setResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+
+  const categories = ['COVID-19', 'ELECTION', 'POLITICS', 'TERROR', 'VIOLENCE', 'SPORTS', 'ENTERTAINMENT', 'HEALTH', 'RELIGION'];
 
   const checkNews = async () => {
     setResult(null);
     setError('');
 
     if (!text.trim()) {
-      setError('Please enter some news text or URL');
+      setError('Please enter some news text');
       return;
     }
 
@@ -23,7 +26,11 @@ const FakeNewsDetector = () => {
       const response = await fetch('http://127.0.0.1:5000/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
+        body: JSON.stringify({ 
+          text: text.trim(),
+          web: web.trim() || undefined,
+          category: category || undefined
+        })
       });
 
       const data = await response.json();
@@ -31,233 +38,254 @@ const FakeNewsDetector = () => {
       if (response.ok) {
         const isFake = data.prediction === 'Fake';
         setResult({
-          verdict: isFake ? 'Not true' : 'Verified',
+          verdict: isFake ? 'Fake News' : 'Real News',
           isFake: isFake,
-          reason: data.reason || (isFake 
-            ? 'Our AI model has detected patterns commonly associated with fake news or misleading information in this content.'
-            : 'The content appears to be credible. Our analysis shows patterns consistent with legitimate news sources.'),
-          confidence: data.confidence || '95/100'
+          reason: data.reason,
+          confidence: data.confidence,
+          confidence_percentage: data.confidence_percentage,
+          model_votes: data.model_votes,
+          model_agreement: data.model_agreement,
+          analysis_notes: data.analysis_notes || [],
+          indian_context: data.indian_context || {}
         });
       } else {
         setError(data.error || 'Something went wrong.');
       }
     } catch (err) {
-      setError('⚠️ Could not connect to the server. Please ensure the backend is running.');
+      setError('⚠️ Could not connect to the server. Please ensure the backend is running on port 5000.');
     } finally {
       setLoading(false);
     }
   };
 
-  const copyResult = () => {
-    if (result) {
-      const resultText = `Analysis Result:\n\nVerdict: ${result.verdict}\nReason: ${result.reason}\nConfidence: ${result.confidence}`;
-      navigator.clipboard.writeText(resultText);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    }
+  const getCredibilityColor = (credibility) => {
+    if (credibility === 'TRUSTED') return 'text-emerald-400';
+    if (credibility === 'SUSPICIOUS') return 'text-red-400';
+    return 'text-yellow-400';
+  };
+
+  const getCredibilityBg = (credibility) => {
+    if (credibility === 'TRUSTED') return 'bg-emerald-500/20';
+    if (credibility === 'SUSPICIOUS') return 'bg-red-500/20';
+    return 'bg-yellow-500/20';
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-indigo-900 via-purple-900 to-blue-900 relative overflow-hidden">
-      {/* Animated background elements */}
+      {/* Animated background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute top-0 left-1/4 w-96 h-96 bg-blue-500 rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-pulse"></div>
         <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500 rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-pulse" style={{animationDelay: '1s'}}></div>
-        <div className="absolute top-1/2 left-1/2 w-96 h-96 bg-indigo-500 rounded-full mix-blend-overlay filter blur-3xl opacity-20 animate-pulse" style={{animationDelay: '2s'}}></div>
       </div>
 
-      {/* Floating particles */}
-      <div className="absolute inset-0 pointer-events-none">
-        {[...Array(20)].map((_, i) => (
-          <div
-            key={i}
-            className="absolute w-1 h-1 bg-white rounded-full opacity-30"
-            style={{
-              left: `${Math.random() * 100}%`,
-              top: `${Math.random() * 100}%`,
-              animation: `float ${5 + Math.random() * 10}s ease-in-out infinite`,
-              animationDelay: `${Math.random() * 5}s`
-            }}
-          ></div>
-        ))}
-      </div>
-
-      <div className="relative w-full max-w-5xl z-10">
-        {/* Main Card */}
-        <div className="bg-slate-900/40 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/10 p-8 md:p-12 transition-all duration-500 hover:shadow-blue-500/20 hover:shadow-3xl">
+      <div className="relative w-full max-w-6xl z-10">
+        <div className="bg-slate-900/40 backdrop-blur-2xl rounded-3xl shadow-2xl border border-white/10 p-8 md:p-12">
           
-          {/* Header Section */}
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center justify-center w-24 h-24 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 rounded-3xl mb-6 shadow-2xl shadow-blue-500/50 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-blue-400 to-purple-600 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-              <Shield className="w-12 h-12 text-white relative z-10 transform group-hover:scale-110 transition-transform duration-300" strokeWidth={2.5} />
+          {/* Header */}
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-500 to-indigo-600 rounded-3xl mb-4 shadow-2xl">
+              <Shield className="w-10 h-10 text-white" strokeWidth={2.5} />
             </div>
             
-            <h1 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 mb-4 tracking-tight">
-              Paste a news article URL or type a fact below and<br />
-              <span className="text-4xl md:text-5xl">let our AI tell you if it's credible — or complete nonsense.</span>
+            <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-200 via-purple-200 to-pink-200 mb-2">
+              🇮🇳 Indian Fake News Detector
             </h1>
+            <p className="text-slate-300 text-lg">Powered by IFND Dataset • AI-Enhanced Detection</p>
           </div>
 
           {/* Input Section */}
-          <div className="mb-8">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Enter news text or URL..."
+          <div className="space-y-4 mb-6">
+            {/* News Text */}
+            <div>
+              <label className="block text-slate-300 font-semibold mb-2 text-sm">
+                📰 News Statement *
+              </label>
+              <textarea
+                placeholder="Enter news headline or article text..."
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && checkNews()}
-                className="w-full px-6 py-5 text-lg text-white placeholder-slate-400 bg-slate-800/50 backdrop-blur-sm border-2 border-slate-600 rounded-2xl transition-all duration-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none focus:bg-slate-800/70"
+                rows={4}
+                className="w-full px-4 py-3 text-white placeholder-slate-400 bg-slate-800/50 border-2 border-slate-600 rounded-xl transition-all duration-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none resize-none"
               />
-              <button
-                onClick={checkNews}
-                disabled={loading || !text.trim()}
-                className="absolute right-2 top-1/2 -translate-y-1/2 px-8 py-3 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/30 transition-all duration-300 disabled:from-slate-600 disabled:to-slate-700 disabled:shadow-none disabled:cursor-not-allowed hover:shadow-xl hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
-              >
-                {loading ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    Analyzing
-                  </>
-                ) : (
-                  <>
-                    🔍 Analyze
-                  </>
-                )}
-              </button>
             </div>
+
+            {/* Source and Category Row */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Source */}
+              <div>
+                <label className="block text-slate-300 font-semibold mb-2 text-sm">
+                  <Globe className="w-4 h-4 inline mr-1" />
+                  Source (optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g., Times of India, NDTV, Unknown"
+                  value={web}
+                  onChange={(e) => setWeb(e.target.value)}
+                  className="w-full px-4 py-3 text-white placeholder-slate-400 bg-slate-800/50 border-2 border-slate-600 rounded-xl transition-all duration-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none"
+                />
+              </div>
+
+              {/* Category */}
+              <div>
+                <label className="block text-slate-300 font-semibold mb-2 text-sm">
+                  <Tag className="w-4 h-4 inline mr-1" />
+                  Category (optional)
+                </label>
+                <select
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full px-4 py-3 text-white bg-slate-800/50 border-2 border-slate-600 rounded-xl transition-all duration-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 focus:outline-none cursor-pointer"
+                >
+                  <option value="">Select category</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {/* Analyze Button */}
+            <button
+              onClick={checkNews}
+              disabled={loading || !text.trim()}
+              className="w-full px-8 py-4 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white font-bold text-lg rounded-xl shadow-lg shadow-emerald-500/30 transition-all duration-300 disabled:from-slate-600 disabled:to-slate-700 disabled:shadow-none disabled:cursor-not-allowed hover:scale-105 active:scale-95 flex items-center justify-center gap-2"
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                  Analyzing with AI...
+                </>
+              ) : (
+                <>
+                  🔍 Analyze News
+                </>
+              )}
+            </button>
           </div>
 
-          {/* Results Section */}
+          {/* Results */}
           {result && (
-            <div className="mt-8 p-8 bg-slate-800/60 backdrop-blur-xl rounded-3xl border-2 border-slate-700 shadow-2xl animate-slideIn">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex items-center justify-center w-12 h-12 bg-slate-700/50 rounded-xl">
-                  <span className="text-2xl">📋</span>
-                </div>
-                <h2 className="text-2xl font-bold text-white">Analysis Result:</h2>
-              </div>
-
-              <div className="space-y-6">
-                {/* Verdict */}
-                <div className="flex items-start gap-4">
-                  <div className="flex items-center justify-center w-10 h-10 bg-emerald-500/20 rounded-lg flex-shrink-0">
-                    {result.isFake ? (
-                      <AlertTriangle className="w-6 h-6 text-red-400" strokeWidth={2.5} />
-                    ) : (
-                      <CheckCircle className="w-6 h-6 text-emerald-400" strokeWidth={2.5} />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-emerald-400 font-bold text-lg">● Verdict:</span>
-                    </div>
-                    <p className={`text-xl font-semibold ${result.isFake ? 'text-red-300' : 'text-emerald-300'}`}>
-                      {result.verdict}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Reason */}
-                <div className="flex items-start gap-4">
-                  <div className="flex items-center justify-center w-10 h-10 bg-purple-500/20 rounded-lg flex-shrink-0">
-                    <span className="text-xl">💬</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-purple-400 font-bold text-lg">● Reason:</span>
-                    </div>
-                    <p className="text-slate-300 text-base leading-relaxed">
-                      {result.reason}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Confidence */}
-                <div className="flex items-start gap-4">
-                  <div className="flex items-center justify-center w-10 h-10 bg-blue-500/20 rounded-lg flex-shrink-0">
-                    <span className="text-xl">📊</span>
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-blue-400 font-bold text-lg">● Confidence:</span>
-                    </div>
-                    <p className="text-white text-xl font-bold">
-                      {result.confidence}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Copy Button */}
-              <div className="mt-8 flex justify-start">
-                <button
-                  onClick={copyResult}
-                  className="px-6 py-3 bg-slate-700/50 hover:bg-slate-600/50 text-white font-semibold rounded-xl border border-slate-600 transition-all duration-300 flex items-center gap-2 hover:scale-105 active:scale-95"
-                >
-                  {copied ? (
-                    <>
-                      <Check className="w-5 h-5" />
-                      Copied!
-                    </>
+            <div className="mt-6 p-6 bg-slate-800/60 backdrop-blur-xl rounded-2xl border-2 border-slate-700 animate-slideIn">
+              
+              {/* Verdict Header */}
+              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-700">
+                <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${result.isFake ? 'bg-red-500/20' : 'bg-emerald-500/20'}`}>
+                  {result.isFake ? (
+                    <AlertTriangle className="w-7 h-7 text-red-400" strokeWidth={2.5} />
                   ) : (
-                    <>
-                      📋 Copy Result
-                    </>
+                    <CheckCircle className="w-7 h-7 text-emerald-400" strokeWidth={2.5} />
                   )}
-                </button>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">{result.verdict}</h2>
+                  <p className="text-slate-400 text-sm">Confidence: {result.confidence}</p>
+                </div>
               </div>
+
+              {/* Main Reason */}
+              <div className="mb-6 p-4 bg-slate-700/30 rounded-xl">
+                <p className="text-slate-200 leading-relaxed">{result.reason}</p>
+              </div>
+
+              {/* Indian Context Analysis */}
+              {result.indian_context && (
+                <div className="mb-6">
+                  <h3 className="text-white font-bold mb-3 flex items-center gap-2">
+                    <TrendingUp className="w-5 h-5 text-purple-400" />
+                    Indian Context Analysis
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    {/* Source Credibility */}
+                    <div className={`p-3 ${getCredibilityBg(result.indian_context.source_credibility)} rounded-lg border border-slate-600`}>
+                      <div className="text-xs text-slate-400 mb-1">Source Credibility</div>
+                      <div className={`font-bold ${getCredibilityColor(result.indian_context.source_credibility)}`}>
+                        {result.indian_context.source_credibility}
+                      </div>
+                    </div>
+
+                    {/* Sensationalism */}
+                    <div className="p-3 bg-blue-500/20 rounded-lg border border-slate-600">
+                      <div className="text-xs text-slate-400 mb-1">Sensationalism Score</div>
+                      <div className="font-bold text-blue-400">
+                        {result.indian_context.sensationalism_score}/10
+                      </div>
+                    </div>
+
+                    {/* Implausible Claims */}
+                    <div className={`p-3 ${result.indian_context.has_implausible_claims ? 'bg-orange-500/20' : 'bg-emerald-500/20'} rounded-lg border border-slate-600`}>
+                      <div className="text-xs text-slate-400 mb-1">Implausible Claims</div>
+                      <div className={`font-bold ${result.indian_context.has_implausible_claims ? 'text-orange-400' : 'text-emerald-400'}`}>
+                        {result.indian_context.has_implausible_claims ? 'YES ⚠️' : 'NO ✓'}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Model Votes */}
+              {result.model_votes && (
+                <div className="mb-6">
+                  <h3 className="text-white font-bold mb-3">🤖 Model Ensemble Votes</h3>
+                  <div className="space-y-2">
+                    {Object.entries(result.model_votes).map(([model, vote]) => (
+                      <div key={model} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
+                        <span className="text-slate-300">{model}</span>
+                        <span className={`font-bold px-3 py-1 rounded-full text-sm ${vote === 'Fake' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
+                          {vote}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-slate-400 text-sm mt-2">
+                    Model Agreement: {result.model_agreement}
+                  </p>
+                </div>
+              )}
+
+              {/* Analysis Notes */}
+              {result.analysis_notes && result.analysis_notes.length > 0 && (
+                <div>
+                  <h3 className="text-white font-bold mb-3">📝 Analysis Notes</h3>
+                  <ul className="space-y-2">
+                    {result.analysis_notes.map((note, idx) => (
+                      <li key={idx} className="flex items-start gap-2 text-slate-300 text-sm">
+                        <span className="text-blue-400 mt-1">•</span>
+                        <span>{note}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           )}
 
+          {/* Error */}
           {error && (
-            <div className="mt-8 p-6 bg-amber-900/40 backdrop-blur-xl border-2 border-amber-600/50 rounded-2xl shadow-lg animate-slideIn">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center justify-center w-12 h-12 bg-amber-500/20 rounded-full flex-shrink-0">
-                  <AlertTriangle className="w-6 h-6 text-amber-400" strokeWidth={2.5} />
-                </div>
-                <p className="text-amber-200 font-medium">{error}</p>
+            <div className="mt-6 p-4 bg-amber-900/40 border-2 border-amber-600/50 rounded-xl animate-slideIn">
+              <div className="flex items-center gap-3">
+                <AlertTriangle className="w-6 h-6 text-amber-400" />
+                <p className="text-amber-200">{error}</p>
               </div>
             </div>
           )}
         </div>
 
-        {/* Footer Note */}
-        <p className="text-center text-slate-400 text-sm mt-8 px-4 flex items-center justify-center gap-2">
+        {/* Footer */}
+        <p className="text-center text-slate-400 text-sm mt-6 flex items-center justify-center gap-2">
           <Sparkles className="w-4 h-4 text-yellow-400" />
-          Powered by AI • For educational purposes • Always verify from multiple sources
+          IFND Dataset (2013-2021) • 3-Model Ensemble • Indian Media Context
           <Sparkles className="w-4 h-4 text-yellow-400" />
         </p>
       </div>
 
       <style>{`
         @keyframes slideIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
         }
         .animate-slideIn {
           animation: slideIn 0.5s ease-out;
-        }
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0) translateX(0);
-          }
-          25% {
-            transform: translateY(-20px) translateX(10px);
-          }
-          50% {
-            transform: translateY(-10px) translateX(-10px);
-          }
-          75% {
-            transform: translateY(-15px) translateX(5px);
-          }
         }
       `}</style>
     </div>
