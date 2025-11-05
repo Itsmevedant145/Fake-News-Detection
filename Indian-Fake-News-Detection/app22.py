@@ -8,16 +8,26 @@ import traceback
 app = Flask(__name__)
 
 # ============================================================================
-# CORS CONFIGURATION - FIX
+# CORS CONFIGURATION - COMPREHENSIVE FIX
 # ============================================================================
-# Configure CORS properly with your frontend URL
-FRONTEND_URL = "https://fake-news-detection-frontend-h43v.onrender.com"
-
+# Allow all origins for now (you can restrict later)
 CORS(app, 
-     resources={r"/*": {"origins": [FRONTEND_URL, "http://localhost:3000"]}},
-     allow_headers=["Content-Type", "Authorization"],
-     methods=["GET", "POST", "OPTIONS"],
-     supports_credentials=True)
+     resources={r"/*": {
+         "origins": "*",
+         "methods": ["GET", "POST", "OPTIONS"],
+         "allow_headers": ["Content-Type", "Authorization"],
+         "expose_headers": ["Content-Type"],
+         "supports_credentials": False,
+         "max_age": 3600
+     }})
+
+# Additional after_request handler for redundancy
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    return response
 
 print("Loading models for Indian Fake News Detection...")
 try:
