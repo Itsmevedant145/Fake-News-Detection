@@ -1,14 +1,24 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS ,cross_origin
+from flask_cors import CORS
 import joblib
 import numpy as np
 import re
 import traceback
 
-
-
 app = Flask(__name__)
-CORS(app, origins=["https://fake-news-detection-frontend-h43v.onrender.com"])
+
+# ============================================================================
+# CORS CONFIGURATION - FIX
+# ============================================================================
+# Configure CORS properly with your frontend URL
+FRONTEND_URL = "https://fake-news-detection-frontend-h43v.onrender.com"
+
+CORS(app, 
+     resources={r"/*": {"origins": [FRONTEND_URL, "http://localhost:3000"]}},
+     allow_headers=["Content-Type", "Authorization"],
+     methods=["GET", "POST", "OPTIONS"],
+     supports_credentials=True)
+
 print("Loading models for Indian Fake News Detection...")
 try:
     svc_model = joblib.load('fake_news_svc.pkl')
@@ -27,15 +37,8 @@ except Exception as e:
     raise
 
 # ============================================================================
-# HELPER FUNCTIONS (Same as training script)
+# HELPER FUNCTIONS
 # ============================================================================
-@app.after_request
-def add_cors_headers(response):
-    response.headers['Access-Control-Allow-Origin'] = '*'
-    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
-    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
-    return response
-
 def clean_text(text):
     """Enhanced text cleaning for Indian context"""
     if not text or text.strip() == "":
@@ -136,15 +139,15 @@ def create_enhanced_features(statement, web, category):
     
     return " ".join(features)
 
-@app.route('/predict', methods=['POST'])
-@cross_origin()
+# ============================================================================
+# API ROUTES
+# ============================================================================
+@app.route('/predict', methods=['POST', 'OPTIONS'])
 def predict():
-     if request.method == 'OPTIONS':
-        response = jsonify({'message': 'CORS preflight'})
-        response.headers.add('Access-Control-Allow-Origin', 'https://fake-news-detection-frontend-h43v.onrender.com')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
-        return response, 200
+    if request.method == 'OPTIONS':
+        # Preflight request
+        return '', 204
+    
     try:
         data = request.json
         
@@ -211,10 +214,9 @@ def predict():
             override_applied = True
             override_reason = "Implausible claim detected"
         
-        # AGGRESSIVE: Override for highly suspicious sources (WhatsApp, Facebook)
+        # Override for highly suspicious sources
         highly_suspicious = ['whatsapp', 'facebook', 'twitter', 'viral', 'forward']
         if any(sus in web.lower() for sus in highly_suspicious) and category.upper() in ['COVID-19', 'HEALTH', 'POLITICS']:
-            # If suspicious source + sensitive category, be more aggressive
             if final_prediction == 0 and confidence_percentage < 70:
                 final_prediction = 1
                 confidence_percentage = 65
@@ -331,7 +333,6 @@ def predict():
         }), 500
 
 @app.route('/health', methods=['GET'])
-@cross_origin()
 def health_check():
     """Health check endpoint"""
     return jsonify({
@@ -342,18 +343,16 @@ def health_check():
     })
 
 @app.route('/sources', methods=['GET'])
-@cross_origin()
 def get_sources():
     """Get list of trusted and suspicious sources"""
     return jsonify({
-        'trusted_sources': INDIAN_TRUSTED_SOURCES[:20],  # First 20
+        'trusted_sources': INDIAN_TRUSTED_SOURCES[:20],
         'suspicious_indicators': SUSPICIOUS_SOURCES,
         'total_trusted': len(INDIAN_TRUSTED_SOURCES),
         'note': 'Based on IFND dataset and Indian media landscape'
     })
 
 @app.route('/models-info', methods=['GET'])
-@cross_origin()
 def models_info():
     """Get information about loaded models"""
     return jsonify({
@@ -385,7 +384,6 @@ def models_info():
     })
 
 @app.route('/test-examples', methods=['GET'])
-@cross_origin()
 def test_examples():
     """Get example news for testing"""
     return jsonify({
@@ -424,7 +422,6 @@ def test_examples():
     })
 
 @app.route('/', methods=['GET'])
-@cross_origin()
 def home():
     """Home endpoint with API documentation"""
     return jsonify({
