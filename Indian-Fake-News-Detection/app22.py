@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
-from flask_cors import CORS
+from flask_cors import CORS ,cross_origin
 import joblib
 import numpy as np
 import re
 import traceback
+
+
 
 app = Flask(__name__)
 CORS(app)
