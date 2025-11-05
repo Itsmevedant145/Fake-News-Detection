@@ -8,7 +8,7 @@ import traceback
 
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app, origins=["https://fake-news-detection-frontend-h43v.onrender.com"])
 print("Loading models for Indian Fake News Detection...")
 try:
     svc_model = joblib.load('fake_news_svc.pkl')
@@ -139,6 +139,12 @@ def create_enhanced_features(statement, web, category):
 @app.route('/predict', methods=['POST'])
 @cross_origin()
 def predict():
+     if request.method == 'OPTIONS':
+        response = jsonify({'message': 'CORS preflight'})
+        response.headers.add('Access-Control-Allow-Origin', 'https://fake-news-detection-frontend-h43v.onrender.com')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST,OPTIONS')
+        return response, 200
     try:
         data = request.json
         
