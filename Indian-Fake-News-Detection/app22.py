@@ -11,6 +11,7 @@ app = Flask(__name__)
 # CORS CONFIGURATION - COMPREHENSIVE FIX
 # ============================================================================
 # Allow all origins for now (you can restrict later)
+# At the top after imports
 CORS(app, 
      resources={r"/*": {
          "origins": "*",
@@ -21,7 +22,6 @@ CORS(app,
          "max_age": 3600
      }})
 
-# Additional after_request handler for redundancy
 @app.after_request
 def after_request(response):
     response.headers.add('Access-Control-Allow-Origin', '*')
