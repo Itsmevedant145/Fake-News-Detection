@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Indian Fake News Detector</title>
+</head>
+<body>
+  <h1>Fake News Detector</h1>
+  <textarea id="newsText" rows="10" cols="50" placeholder="Paste Indian news here..."></textarea><br>
+  <button onclick="checkNews()">Check News</button>
+  <p id="result"></p>
+
+  <script>
+    async function checkNews() {
+      const newsText = document.getElementById('newsText').value;
+      if (!newsText) {
+        alert("Please enter news text");
+        return;
+      }
+
+      const response = await fetch('http://127.0.0.1:5000/predict', {  // FULL Flask URL here
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: newsText })  // key name "text" matches Flask
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        document.getElementById('result').textContent = "Prediction: " + data.prediction;
+      } else {
+        const error = await response.json();
+        document.getElementById('result').textContent = "Error: " + error.error;
+      }
+    }
+  </script>
+</body>
+</html>
