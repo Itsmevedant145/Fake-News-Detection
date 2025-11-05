@@ -133,11 +133,8 @@ def create_enhanced_features(statement, web, category):
     
     return " ".join(features)
 
-# ============================================================================
-# API ENDPOINTS
-# ============================================================================
-
 @app.route('/predict', methods=['POST'])
+@cross_origin()
 def predict():
     try:
         data = request.json
@@ -325,6 +322,7 @@ def predict():
         }), 500
 
 @app.route('/health', methods=['GET'])
+@cross_origin()
 def health_check():
     """Health check endpoint"""
     return jsonify({
@@ -335,6 +333,7 @@ def health_check():
     })
 
 @app.route('/sources', methods=['GET'])
+@cross_origin()
 def get_sources():
     """Get list of trusted and suspicious sources"""
     return jsonify({
@@ -345,6 +344,7 @@ def get_sources():
     })
 
 @app.route('/models-info', methods=['GET'])
+@cross_origin()
 def models_info():
     """Get information about loaded models"""
     return jsonify({
@@ -376,6 +376,7 @@ def models_info():
     })
 
 @app.route('/test-examples', methods=['GET'])
+@cross_origin()
 def test_examples():
     """Get example news for testing"""
     return jsonify({
@@ -414,6 +415,7 @@ def test_examples():
     })
 
 @app.route('/', methods=['GET'])
+@cross_origin()
 def home():
     """Home endpoint with API documentation"""
     return jsonify({
