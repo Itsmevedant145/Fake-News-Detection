@@ -8,12 +8,7 @@ import traceback
 
 
 app = Flask(__name__)
-CORS(app)
-
-# ============================================================================
-# LOAD MODELS AND METADATA
-# ============================================================================
-
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 print("Loading models for Indian Fake News Detection...")
 try:
     svc_model = joblib.load('fake_news_svc.pkl')
@@ -34,6 +29,12 @@ except Exception as e:
 # ============================================================================
 # HELPER FUNCTIONS (Same as training script)
 # ============================================================================
+@app.after_request
+def add_cors_headers(response):
+    response.headers['Access-Control-Allow-Origin'] = '*'
+    response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+    response.headers['Access-Control-Allow-Methods'] = 'GET,POST,OPTIONS'
+    return response
 
 def clean_text(text):
     """Enhanced text cleaning for Indian context"""
