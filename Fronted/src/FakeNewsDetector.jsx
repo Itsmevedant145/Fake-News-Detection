@@ -11,7 +11,7 @@ const FakeNewsDetector = () => {
 
   const categories = ['COVID-19', 'ELECTION', 'POLITICS', 'TERROR', 'VIOLENCE', 'SPORTS', 'ENTERTAINMENT', 'HEALTH', 'RELIGION'];
 
-  const checkNews = async () => {
+    const checkNews = async () => {
     setResult(null);
     setError('');
 
@@ -23,7 +23,10 @@ const FakeNewsDetector = () => {
     setLoading(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/predict', {
+      // ✅ Change this to your Render backend URL
+      const API_BASE = 'https://indian-fake-news-detection.onrender.com';  // <-- replace with your actual Render backend URL
+
+      const response = await fetch(`${API_BASE}/predict`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
@@ -42,9 +45,6 @@ const FakeNewsDetector = () => {
           isFake: isFake,
           reason: data.reason,
           confidence: data.confidence,
-          confidence_percentage: data.confidence_percentage,
-          model_votes: data.model_votes,
-          model_agreement: data.model_agreement,
           analysis_notes: data.analysis_notes || [],
           indian_context: data.indian_context || {}
         });
@@ -52,11 +52,12 @@ const FakeNewsDetector = () => {
         setError(data.error || 'Something went wrong.');
       }
     } catch (err) {
-      setError('⚠️ Could not connect to the server. Please ensure the backend is running on port 5000.');
+      setError('⚠️ Could not connect to the server. Please ensure the backend is reachable.');
     } finally {
       setLoading(false);
     }
   };
+
 
   const getCredibilityColor = (credibility) => {
     if (credibility === 'TRUSTED') return 'text-emerald-400';
@@ -68,6 +69,40 @@ const FakeNewsDetector = () => {
     if (credibility === 'TRUSTED') return 'bg-emerald-500/20';
     if (credibility === 'SUSPICIOUS') return 'bg-red-500/20';
     return 'bg-yellow-500/20';
+  };
+
+  // Simple spinning clock-like confidence indicator
+  const ConfidenceSpinner = ({ confidence }) => {
+    const angle = Math.min(360, Math.max(0, (parseFloat(confidence) || 0) * 3.6));
+    return (
+      <div className="relative w-20 h-20 mx-auto mb-4">
+        <svg viewBox="0 0 36 36" className="w-full h-full">
+          <path
+            className="text-slate-700"
+            stroke="currentColor"
+            strokeWidth="3"
+            fill="none"
+            d="M18 2.0845
+              a 15.9155 15.9155 0 0 1 0 31.831
+              a 15.9155 15.9155 0 0 1 0 -31.831"
+          />
+          <path
+            className={confidence > 70 ? 'text-emerald-400' : confidence > 40 ? 'text-yellow-400' : 'text-red-400'}
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeDasharray={`${angle}, 360`}
+            strokeLinecap="round"
+            fill="none"
+            d="M18 2.0845
+              a 15.9155 15.9155 0 0 1 0 31.831
+              a 15.9155 15.9155 0 0 1 0 -31.831"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-sm">
+          {confidence ? `${confidence}%` : '—'}
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -169,18 +204,12 @@ const FakeNewsDetector = () => {
             <div className="mt-6 p-6 bg-slate-800/60 backdrop-blur-xl rounded-2xl border-2 border-slate-700 animate-slideIn">
               
               {/* Verdict Header */}
-              <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-700">
-                <div className={`flex items-center justify-center w-12 h-12 rounded-xl ${result.isFake ? 'bg-red-500/20' : 'bg-emerald-500/20'}`}>
-                  {result.isFake ? (
-                    <AlertTriangle className="w-7 h-7 text-red-400" strokeWidth={2.5} />
-                  ) : (
-                    <CheckCircle className="w-7 h-7 text-emerald-400" strokeWidth={2.5} />
-                  )}
-                </div>
-                <div>
-                  <h2 className="text-2xl font-bold text-white">{result.verdict}</h2>
-                  <p className="text-slate-400 text-sm">Confidence: {result.confidence}</p>
-                </div>
+              <div className="flex flex-col items-center text-center mb-6">
+                <ConfidenceSpinner confidence={result.confidence} />
+                <h2 className={`text-3xl font-bold ${result.isFake ? 'text-red-400' : 'text-emerald-400'}`}>
+                  {result.verdict}
+                </h2>
+                <p className="text-slate-400 text-sm mt-1">Confidence level</p>
               </div>
 
               {/* Main Reason */}
@@ -196,7 +225,6 @@ const FakeNewsDetector = () => {
                     Indian Context Analysis
                   </h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    {/* Source Credibility */}
                     <div className={`p-3 ${getCredibilityBg(result.indian_context.source_credibility)} rounded-lg border border-slate-600`}>
                       <div className="text-xs text-slate-400 mb-1">Source Credibility</div>
                       <div className={`font-bold ${getCredibilityColor(result.indian_context.source_credibility)}`}>
@@ -204,7 +232,6 @@ const FakeNewsDetector = () => {
                       </div>
                     </div>
 
-                    {/* Sensationalism */}
                     <div className="p-3 bg-blue-500/20 rounded-lg border border-slate-600">
                       <div className="text-xs text-slate-400 mb-1">Sensationalism Score</div>
                       <div className="font-bold text-blue-400">
@@ -212,7 +239,6 @@ const FakeNewsDetector = () => {
                       </div>
                     </div>
 
-                    {/* Implausible Claims */}
                     <div className={`p-3 ${result.indian_context.has_implausible_claims ? 'bg-orange-500/20' : 'bg-emerald-500/20'} rounded-lg border border-slate-600`}>
                       <div className="text-xs text-slate-400 mb-1">Implausible Claims</div>
                       <div className={`font-bold ${result.indian_context.has_implausible_claims ? 'text-orange-400' : 'text-emerald-400'}`}>
@@ -220,26 +246,6 @@ const FakeNewsDetector = () => {
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-
-              {/* Model Votes */}
-              {result.model_votes && (
-                <div className="mb-6">
-                  <h3 className="text-white font-bold mb-3">🤖 Model Ensemble Votes</h3>
-                  <div className="space-y-2">
-                    {Object.entries(result.model_votes).map(([model, vote]) => (
-                      <div key={model} className="flex items-center justify-between p-3 bg-slate-700/30 rounded-lg">
-                        <span className="text-slate-300">{model}</span>
-                        <span className={`font-bold px-3 py-1 rounded-full text-sm ${vote === 'Fake' ? 'bg-red-500/20 text-red-400' : 'bg-emerald-500/20 text-emerald-400'}`}>
-                          {vote}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-slate-400 text-sm mt-2">
-                    Model Agreement: {result.model_agreement}
-                  </p>
                 </div>
               )}
 
@@ -274,7 +280,7 @@ const FakeNewsDetector = () => {
         {/* Footer */}
         <p className="text-center text-slate-400 text-sm mt-6 flex items-center justify-center gap-2">
           <Sparkles className="w-4 h-4 text-yellow-400" />
-          IFND Dataset (2013-2021) • 3-Model Ensemble • Indian Media Context
+          IFND Dataset • AI Detection • Indian Media Context
           <Sparkles className="w-4 h-4 text-yellow-400" />
         </p>
       </div>
